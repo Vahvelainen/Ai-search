@@ -1,10 +1,11 @@
 const { Configuration, OpenAIApi } = require("openai")
+require('dotenv').config();
 
 exports.getEmbedding = getEmbedding;
 
 const configuration = new Configuration({
-  //Super secret API key should be stored in env configuration etc.
-  apiKey: "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",
+  //API key needs to be set on .env file as OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
 
