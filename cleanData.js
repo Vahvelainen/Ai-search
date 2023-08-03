@@ -1,0 +1,78 @@
+const fs = require('fs')
+const csv = require('csv-parser')
+const openai = require('./openai')
+
+/*
+Reads data from csv and saves necessary fields to JSON with embeddings
+Saves only 1000 items from test data
+*/
+
+// node cleanData.js
+saveDataWithEmbeddings('data/home_depot_data_1_2021_12.csv', 'data.json')
+
+async function saveDataWithEmbeddings(readFile, writeFile) {
+  let data = await readCsvFile(readFile);
+
+  let dataToSave = []
+  for ( let i = 0; i < 1000; i++) {
+    console.log(i)
+    let item = data[i]
+    let embedding = await openai.getEmbedding( item.brand + ' ' + item.title + ' ' + item.description)
+    dataToSave.push({
+      title: item.title,
+      description: item.description,
+      product_id: item.product_id,
+      brand: item.brand,
+      embedding: embedding,
+    });
+  }
+
+  console.log(dataToSave);
+  writeJson(dataToSave, writeFile)
+}
+
+
+function readCsvFile(file) {
+  try {
+    return new Promise((resolve, reject) => {
+      const results = [];
+      fs.createReadStream(file)
+        .pipe(csv())
+        .on('data', (data) => results.push(data))
+        .on('end', () => resolve(results))
+        .on('error', (error) => reject(error));
+      });
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+function writeJson(data, file) {
+  let obj = {data: data}
+  var json = JSON.stringify(obj);
+  fs.writeFile(file, json, 'utf8', error => {
+    if (error) {
+      console.log(error)
+    } else {
+      console.log('File succesfully written to ' + file)
+    }
+  });
+}
+
+// Example product:
+// {
+//   index: '99',
+//   url: 'https://www.homedepot.com/p/Glomar-1-Light-PAR30-White-Gimbal-Ring-Track-Lighting-Head-HD-TH222/202501490',
+//   title: '1-Light PAR30 White Gimbal Ring Track Lighting Head',
+//   images: 'https://images.thdstatic.com/productImages/61682d54-5d2c-4bb8-bb07-8d52e53e0a64/svn/white-glomar-track-lighting-heads-hd-th222-64_100.jpg',
+//   description: 'With its gimbal ring design this track head is stylish and practical. This track head can find itself at home in many applications. This track head is beautifully finished in White.',
+//   product_id: '202501490',
+//   sku: '1000549400.0',
+//   gtin13: '45923402227.0',
+//   brand: 'Glomar',
+//   price: '21.99',
+//   currency: 'USD',
+//   availability: 'InStock',
+//   uniq_id: '2477e96a-df1e-55cb-b827-30d8ff0d667d',
+//   scraped_at: '2021-12-14 00:56:18.533660'
+// }
