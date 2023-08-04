@@ -2,10 +2,11 @@ const fs = require('fs')
 const csv = require('csv-parser')
 const openai = require('./openai')
 
-/*
-Reads data from csv and saves necessary fields to JSON with embeddings
-Saves only 1000 items from test data
-*/
+/**
+ * Reads data from csv and saves necessary fields to JSON with embeddings
+ * Note: the openAI account must be over 48hours old to have rate limit of 3500 RPM
+ * The maxim amout of requests is 350 000 per day without increased rate limit
+ */
 
 // node cleanData.js
 saveDataWithEmbeddings('data/home_depot_data_1_2021_12.csv', 'data.json')
@@ -16,8 +17,8 @@ async function saveDataWithEmbeddings(readFile, writeFile) {
   let dataToSave = []
   let promises = []
 
-  for ( let i = 0; i < 1000; i++) {
-    console.log("Requesting embedding for product number: " + i + "/1000")
+  for ( let i = 0; i < data.length; i++) {
+    console.log("Requesting embedding for product number: " + ( i+1 ) + "/" + data.length )
     let item = data[i]
     let promise = openai.getEmbedding( item.brand + ' ' + item.title + ' ' + item.description)
       .then( embedding => {
@@ -30,6 +31,9 @@ async function saveDataWithEmbeddings(readFile, writeFile) {
         });
       });
     promises.push(promise);
+
+    //wait 20ms to not exceed the rate limit of 3500rpm
+    await timeout(20)
   }
 
   //Await all requests at once
@@ -65,6 +69,11 @@ function writeJson(data, file) {
       console.log('File succesfully written to ' + file)
     }
   });
+}
+
+//https://stackoverflow.com/questions/33289726/combination-of-async-function-await-settimeout
+function timeout(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // Example product:
