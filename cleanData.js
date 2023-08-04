@@ -14,18 +14,26 @@ async function saveDataWithEmbeddings(readFile, writeFile) {
   let data = await readCsvFile(readFile);
 
   let dataToSave = []
+  let promises = []
+
   for ( let i = 0; i < 1000; i++) {
-    console.log(i)
+    console.log("Requesting embedding for product number: " + i + "/1000")
     let item = data[i]
-    let embedding = await openai.getEmbedding( item.brand + ' ' + item.title + ' ' + item.description)
-    dataToSave.push({
-      title: item.title,
-      description: item.description,
-      product_id: item.product_id,
-      brand: item.brand,
-      embedding: embedding,
-    });
+    let promise = openai.getEmbedding( item.brand + ' ' + item.title + ' ' + item.description)
+      .then( embedding => {
+        dataToSave.push({
+          title: item.title,
+          description: item.description,
+          product_id: item.product_id,
+          brand: item.brand,
+          embedding: embedding,
+        });
+      });
+    promises.push(promise);
   }
+
+  //Await all requests at once
+  await Promise.all(promises);
 
   console.log(dataToSave);
   writeJson(dataToSave, writeFile)
